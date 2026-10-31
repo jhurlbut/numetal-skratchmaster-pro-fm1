@@ -158,7 +158,8 @@ def build_app():
             ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
             ("cc", *flags, "-c", FW / "src" / "dinghy.c", "-o", OUT / "dinghy.o")]
     sam = FW / "src" / "sam"                     # SAM (Software Automatic Mouth), its own objects: its globals stay out of dinghy.c
-    sam_flags = [*CFLAGS, "-w", f"-I{sam}", f"-I{sam / 'shim'}", f"-I{sam / 'shim_fm1'}"]
+    inc = sam.relative_to(SRC)                   # relative like the other -I flags: under Docker the repo is /work
+    sam_flags = [*CFLAGS, "-w", f"-I{inc}", f"-I{inc / 'shim'}", f"-I{inc / 'shim_fm1'}"]
     sam_objs = [OUT / f"sam_{n}.o" for n in SAM_SRC]
     cmds += [("cc", *sam_flags, "-c", sam / f"{n}.c", "-o", o) for n, o in zip(SAM_SRC, sam_objs)]
     tc_all(*cmds)
