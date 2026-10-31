@@ -213,7 +213,7 @@ static const char *const FX_NAME[FX_COUNT] = {"FILTER", "CRUSH", "MEGAPHONE", "D
  * stretches (from tick, to tick). 64 ticks a beat; a technique is 1 or 2 beats and loops while the key is held. */
 enum { SC_BABY, SC_DRAG, SC_STAB, SC_FWD, SC_BACK, SC_CHIRP, SC_TRANS, SC_TEAR, SC_FLARE, SC_FLARE2, SC_ORBIT,
        SC_CRAB, SC_TWIDDLE, SC_TAZER, SC_SCRIBBLE, SC_HYDRO, SC_LASER, SC_COMBO, SC_ONESHOT, SC_COUNT };
-#define NTECH SC_COMBO                          /* ONE SHOT: taps play from the top, holds scratch the last technique used */
+#define NTECH SC_COMBO                          /* ONE SHOT: a key plays the word from the top, held or tapped, no strokes */
 static const char *const SC_NAME[SC_COUNT] = {"BABY", "DRAG", "STAB", "FORWARD", "BACKWARD", "CHIRP", "TRANSFORM",
     "TEAR", "FLARE", "2-CLICK", "ORBIT", "CRAB", "TWIDDLE", "TAZER", "SCRIBBLE", "HYDROPLANE", "LASER", "COMBO", "ONE SHOT"};
 #define KP_END 255
@@ -1499,7 +1499,7 @@ static void app_main(void)
 {
     struct {                                    /* what survives a power-off */
         uint8_t fx, amt[FX_COUNT], echo, etime, style, reach, voice, groove, hard, beat, aut, swing, tune, decay, dlvl, vlvl, sync;
-        uint8_t rap, glvl, hook, lstyle;          /* lstyle: the technique last scratched with (ONE SHOT's holds) */
+        uint8_t rap, glvl, hook, lstyle;          /* lstyle: the technique last scratched with (ONE SHOT: AUTO's, a step's) */
         uint8_t lfo_on, lfo_rate, lfo_shape, lfo_depth, lfo_dest, curve, torque, hamster, tsrc, space, blvl, width, ver;
         int8_t jog;                               /* the jog's sensitivity: -4..4, 0 = a click as far as before */
         uint8_t pad3[2];
@@ -1660,8 +1660,7 @@ static void app_main(void)
                 else if (set.beat == M_TONE) { set.tsrc = (uint8_t)clampi(set.tsrc + e, 0, NTSRC - 1); TOAST("", tsrc_name(set.tsrc)); }
                 else {
                     set.style = (uint8_t)clampi(set.style + e, 0, SC_COUNT - 1);
-                    if (set.style == SC_ONESHOT) TOAST("ONE SHOT", SC_NAME[set.lstyle]);   /* and the technique its holds scratch */
-                    else TOAST("", SC_NAME[set.style]);
+                    TOAST("", SC_NAME[set.style]);
                     t_score = now; deck_view = ~0u;
                 }
                 knobs = dirty = 1;
@@ -1843,9 +1842,9 @@ static void app_main(void)
                 }
                 if (keys >> k & 1u) {
                     if (dr_i >= 0) { if (now - t_down[k] > 220u) roll |= 1u << dr_i; }
-                    else if (!scr[k] && now - t_down[k] > 180u && held_word[k] >= 0) {   /* held: scratch it */
+                    else if (!scr[k] && now - t_down[k] > 180u && held_word[k] >= 0 && set.style != SC_ONESHOT) {   /* held: scratch it (ONE SHOT: it just plays) */
                         scr[k] = 1;
-                        if (set.style < SC_ONESHOT && set.lstyle != set.style) { set.lstyle = set.style; dirty = 1; }   /* for ONE SHOT */
+                        if (set.lstyle != set.style) { set.lstyle = set.style; dirty = 1; }   /* for ONE SHOT's AUTO and steps */
                         deck_cmd(CMD_SCR, (uint32_t)held_word[k]);
                         if (rec && play) { seq_flag[qstep[k]] |= SEQ_SCR; seq_word[qstep[k]] = (int8_t)held_word[k]; }
                     }
